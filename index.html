@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TDEE Dashboard — Clinical Exercise Physiology</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+          mono: ['JetBrains Mono', 'monospace'],
+        },
+        colors: {
+          ink: {
+            900: '#0a0f14',
+            800: '#0f1620',
+            700: '#141d2a',
+            600: '#1b2636',
+            500: '#243247',
+          },
+          accent: {
+            emerald: '#10b981',
+            teal: '#14b8a6',
+            amber: '#f59e0b',
+            rose: '#f43f5e',
+            sky: '#0ea5e9',
+          },
+        },
+      },
+    },
+  };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { background: #0a0f14; color: #e5e7eb; }
+  body {
+    background-image:
+      radial-gradient(1200px 600px at 10% -10%, rgba(16,185,129,0.08), transparent 60%),
+      radial-gradient(1000px 500px at 100% 10%, rgba(14,165,233,0.07), transparent 60%),
+      radial-gradient(800px 400px at 50% 120%, rgba(244,63,94,0.05), transparent 60%);
+  }
+  .glass {
+    background: linear-gradient(180deg, rgba(20,29,42,0.75) 0%, rgba(15,22,32,0.75) 100%);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .glass-strong {
+    background: linear-gradient(180deg, rgba(27,38,54,0.9) 0%, rgba(20,29,42,0.9) 100%);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .card-target {
+    position: relative;
+    overflow: hidden;
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+  }
+  .card-target:hover { transform: translateY(-2px); }
+  .card-target::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(400px 200px at 100% 0%, var(--glow, rgba(16,185,129,0.18)), transparent 60%);
+    pointer-events: none;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .custom-select { position: relative; }
+  .custom-select .cs-trigger {
+    width: 100%;
+    text-align: left;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.75rem;
+    background: rgba(15,22,32,0.8);
+    border: 1px solid rgba(255,255,255,0.08);
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .custom-select.open .cs-trigger {
+    border-color: rgba(16,185,129,0.55);
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
+  }
+  .custom-select .cs-menu {
+    position: absolute; left: 0; right: 0; top: calc(100% + 0.5rem);
+    z-index: 40;
+    max-height: 320px; overflow-y: auto;
+    border-radius: 0.75rem;
+    background: rgba(15,22,32,0.98);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 20px 50px -10px rgba(0,0,0,0.6);
+    opacity: 0; transform: translateY(-6px); pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .custom-select.open .cs-menu { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  .custom-select .cs-option {
+    padding: 0.75rem 1rem;
+    display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background .15s ease;
+  }
+  .custom-select .cs-option:last-child { border-bottom: none; }
+  .custom-select .cs-option:hover { background: rgba(16,185,129,0.08); }
+  .custom-select .cs-option.active { background: rgba(16,185,129,0.12); }
+  .cs-menu::-webkit-scrollbar { width: 8px; }
+  .cs-menu::-webkit-scrollbar-track { background: transparent; }
+  .cs-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+  .toggle-btn {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border-radius: 0.65rem;
+    font-weight: 600;
+    color: rgba(229,231,235,0.7);
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(15,22,32,0.6);
+    transition: all .2s ease;
+  }
+  .toggle-btn.active {
+    color: #0a0f14;
+    background: linear-gradient(135deg, #10b981, #14b8a6);
+    border-color: transparent;
+    box-shadow: 0 6px 18px -6px rgba(16,185,129,0.6);
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+  }
+  .phase-chip {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .divider-dot::before {
+    content: '•';
+    margin: 0 0.5rem;
+    opacity: 0.4;
+  }
+  .chev { transition: transform .2s ease; }
+  .custom-select.open .chev { transform: rotate(180deg); }
+  .fade-in { animation: fadeIn .35s ease both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: translateY(0);} }
+</style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+
+  <!-- Top Bar -->
+  <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-ink-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white">TDEE Dashboard</h1>
+          <p class="text-xs text-gray-400 -mt-0.5">Clinical Exercise Physiology · Mifflin–St Jeor Engine</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 text-xs text-gray-400">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Live · Wed, Oct 07, 2026</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+
+    <!-- Main Grid: Calculator + Training Profile -->
+    <section class="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-4">
+
+      <!-- Calculator Panel -->
+      <div class="lg:col-span-3 glass-strong rounded-2xl p-5 sm:p-7">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-base sm:text-lg font-semibold text-white">Biometrics & Activity</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Enter your metrics — results update in real time.</p>
+          </div>
+          <span class="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2.5 py-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> AUTO-SYNC
+          </span>
+        </div>
+
+        <!-- Sex Toggle -->
+        <div class="mb-5">
+          <label class="block text-xs font-semibold text-gray-300 mb-2 tracking-wide uppercase">Biological Sex</label>
+          <div class="flex gap-2" id="sexToggle" role="tablist">
+            <button type="button" data-sex="male" class="toggle-btn active" role="tab" aria-selected="true">♂ Male</button>
+            <button type="button" data-sex="female" class="toggle-btn" role="tab" aria-selected="false">♀ Female</button>
+          </div>
+        </div>
+
+        <!-- Numeric Inputs -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+          <div>
+            <label for="weight" class="block text-xs font-semibold text-gray-300 mb-1.5 tracking-wide uppercase">Weight (kg)</label>
+            <input id="weight" type="number" min="20" max="300" step="0.1" value="78"
+              class="w-full rounded-xl bg-ink-800/80 border border-white/8 px-3.5 py-2.5 text-white font-medium focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/20 transition" />
+          </div>
+          <div>
+            <label for="height" class="block text-xs font-semibold text-gray-300 mb-1.5 tracking-wide uppercase">Height (cm)</label>
+            <input id="height" type="number" min="100" max="230" step="0.1" value="178"
+              class="w-full rounded-xl bg-ink-800/80 border border-white/8 px-3.5 py-2.5 text-white font-medium focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/20 transition" />
+          </div>
+          <div>
+            <label for="age" class="block text-xs font-semibold text-gray-300 mb-1.5 tracking-wide uppercase">Age (years)</label>
+            <input id="age" type="number" min="10" max="100" step="1" value="28"
+              class="w-full rounded-xl bg-ink-800/80 border border-white/8 px-3.5 py-2.5 text-white font-medium focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/20 transition" />
+          </div>
+        </div>
+
+        <!-- Custom Activity Dropdown -->
+        <div class="mb-5">
+          <label class="block text-xs font-semibold text-gray-300 mb-2 tracking-wide uppercase">Activity Frequency & Intensity</label>
+          <div id="activitySelect" class="custom-select">
+            <button type="button" class="cs-trigger" id="csTrigger" aria-haspopup="listbox" aria-expanded="false">
+              <span id="csLabel" class="text-white font-medium truncate">Select activity level…</span>
+              <span class="flex items-center gap-2 shrink-0">
+                <span id="csMultiplier" class="text-xs font-mono font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-2 py-0.5">×</span>
+                <svg class="chev w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </span>
+            </button>
+            <div class="cs-menu" id="csMenu" role="listbox"></div>
+          </div>
+        </div>
+
+        <!-- BMR readout -->
+        <div class="rounded-xl border border-white/6 bg-ink-800/50 p-4 flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <p class="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Basal Metabolic Rate</p>
+            <p class="text-xs text-gray-500 mt-0.5">Mifflin–St Jeor · Resting Energy Expenditure</p>
+          </div>
+          <div class="flex items-baseline gap-1.5">
+            <span id="bmrValue" class="num text-2xl sm:text-3xl font-bold text-white">—</span>
+            <span class="text-xs text-gray-400 font-medium">kcal / day</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Training Profile Panel -->
+      <div class="lg:col-span-2 glass-strong rounded-2xl p-5 sm:p-7">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-base sm:text-lg font-semibold text-white">Active Training Routine</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Custom FBEOD + Cardio Protocol</p>
+          </div>
+          <span class="inline-flex items-center gap-1.5 text-[10px] font-semibold tracking-wider text-sky-400 bg-sky-500/10 border border-sky-500/20 rounded-full px-2.5 py-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span> PHASED
+          </span>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Phase 1 -->
+          <article class="rounded-xl border border-white/6 bg-ink-800/40 p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="phase-chip bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">Phase 1</span>
+                <h3 class="text-sm font-semibold text-white">Vertical Pull</h3>
+              </div>
+              <span class="text-[10px] text-gray-400 italic">“Back Builder”</span>
+            </div>
+            <ul class="text-xs text-gray-300 space-y-1.5 mt-2">
+              <li class="flex justify-between gap-3"><span>Bodyweight</span><span class="font-mono text-gray-400">1 × 13</span></li>
+              <li class="flex justify-between gap-3"><span>Weighted Pull-ups <span class="text-emerald-400">+25kg</span></span><span class="font-mono text-gray-400">2 × 3</span></li>
+              <li class="flex justify-between gap-3"><span>Weighted Pull-ups <span class="text-emerald-400">+20kg</span></span><span class="font-mono text-gray-400">2 × 5</span></li>
+            </ul>
+            <p class="mt-2.5 text-[11px] text-amber-300/90 flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Rest: 3 min between sets
+            </p>
+          </article>
+
+          <!-- Phase 2 -->
+          <article class="rounded-xl border border-white/6 bg-ink-800/40 p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="phase-chip bg-sky-500/15 text-sky-300 border border-sky-500/25">Phase 2</span>
+              <h3 class="text-sm font-semibold text-white">Dips</h3>
+            </div>
+            <ul class="text-xs text-gray-300 space-y-1.5 mt-2">
+              <li class="flex justify-between gap-3"><span>Bodyweight Dips</span><span class="font-mono text-gray-400">1 × 17</span></li>
+              <li class="flex justify-between gap-3"><span>Weighted Dips <span class="text-sky-400">+15kg</span></span><span class="font-mono text-gray-400">2 × 6–7</span></li>
+            </ul>
+          </article>
+
+          <!-- Phase 3 -->
+          <article class="rounded-xl border border-white/6 bg-ink-800/40 p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="phase-chip bg-amber-500/15 text-amber-300 border border-amber-500/25">Phase 3</span>
+              <h3 class="text-sm font-semibold text-white">Curls</h3>
+            </div>
+            <p class="text-[11px] text-gray-400 mb-2">Twisting / Rotational Dumbbell Curls</p>
+            <ul class="text-xs text-gray-300 space-y-1.5">
+              <li class="flex justify-between gap-3"><span><span class="text-amber-400">20kg</span></span><span class="font-mono text-gray-400">2 × 3–4</span></li>
+              <li class="flex justify-between gap-3"><span><span class="text-amber-400">15kg</span></span><span class="font-mono text-gray-400">1 × 7</span></li>
+            </ul>
+          </article>
+
+          <!-- Phase 4 -->
+          <article class="rounded-xl border border-white/6 bg-ink-800/40 p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="phase-chip bg-rose-500/15 text-rose-300 border border-rose-500/25">Phase 4</span>
+              <h3 class="text-sm font-semibold text-white">Barbell Squats</h3>
+            </div>
+            <ul class="text-xs text-gray-300 space-y-1.5 mt-2">
+              <li class="flex justify-between gap-3"><span><span class="text-rose-400">55kg</span></span><span class="font-mono text-gray-400">2 × 20</span></li>
+            </ul>
+          </article>
+
+          <!-- Cardio -->
+          <article class="rounded-xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 p-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="phase-chip bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Cardio</span>
+              <h3 class="text-sm font-semibold text-white">Alternate Days</h3>
+            </div>
+            <p class="text-xs text-gray-300 mt-1.5">30-min low-density <span class="text-emerald-300 font-semibold">jump rope</span> interval session</p>
+            <div class="mt-2.5 flex items-center gap-2 text-[11px]">
+              <span class="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 font-semibold">40% work</span>
+              <span class="text-gray-500">/</span>
+              <span class="px-2 py-0.5 rounded-md bg-ink-700 text-gray-300 font-semibold">60% rest</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Target Cards -->
+    <section class="mt-6">
+      <div class="flex items-end justify-between mb-4 flex-wrap gap-2">
+        <div>
+          <h2 class="text-base sm:text-lg font-semibold text-white">Daily Caloric Targets</h2>
+          <p class="text-xs text-gray-400 mt-0.5">Derived from BMR × Activity Multiplier</p>
+        </div>
+        <div id="targetMeta" class="text-xs text-gray-400 font-mono"></div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Maintenance -->
+        <div class="card-target glass rounded-2xl p-5 sm:p-6 flex flex-col" style="--glow: rgba(16,185,129,0.22);">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-[10px] font-bold tracking-[0.18em] text-emerald-300 uppercase">Maintenance</span>
+            <span class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center">
+              <svg class="w-4 h-4 text-emerald-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </span>
+          </div>
+          <div class="flex items-baseline gap-1.5 flex-wrap">
+            <span id="maintenanceValue" class="num text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white">—</span>
+            <span class="text-xs sm:text-sm text-gray-400 font-medium">kcal / day</span>
+          </div>
+          <p class="mt-3 text-xs text-gray-400 leading-relaxed w-full">Energy equilibrium — weight stability baseline at current biometrics and activity level.</p>
+          <div class="mt-auto pt-4 border-t border-white/5 flex items-center justify-between text-[11px] text-gray-500">
+            <span>BMR × <span id="mMult" class="text-emerald-300 font-mono">—</span></span>
+            <span class="text-emerald-300 font-semibold">Baseline</span>
+          </div>
+        </div>
+
+        <!-- Deficit -->
+        <div class="card-target glass rounded-2xl p-5 sm:p-6 flex flex-col" style="--glow: rgba(244,63,94,0.22);">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-[10px] font-bold tracking-[0.18em] text-rose-300 uppercase">Deficit Target</span>
+            <span class="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-500/25 flex items-center justify-center">
+              <svg class="w-4 h-4 text-rose-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 7 12 12 17 7"/><line x1="12" y1="12" x2="12" y2="19"/></svg>
+            </span>
+          </div>
+          <div class="flex items-baseline gap-1.5 flex-wrap">
+            <span id="deficitValue" class="num text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white">—</span>
+            <span class="text-xs sm:text-sm text-gray-400 font-medium">kcal / day</span>
+          </div>
+          <p class="mt-3 text-xs text-gray-400 leading-relaxed w-full">Sustainable fat-loss trajectory · −500 kcal · ~0.45 kg / week projected.</p>
+          <div class="mt-auto pt-4 border-t border-white/5 flex items-center justify-between text-[11px] text-gray-500">
+            <span>Maintenance − 500</span>
+            <span class="text-rose-300 font-semibold">Cut</span>
+          </div>
+        </div>
+
+        <!-- Lean Muscle Build -->
+        <div class="card-target glass rounded-2xl p-5 sm:p-6 flex flex-col" style="--glow: rgba(14,165,233,0.22);">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-[10px] font-bold tracking-[0.18em] text-sky-300 uppercase">Lean Muscle Build</span>
+            <span class="w-8 h-8 rounded-lg bg-sky-500/15 border border-sky-500/25 flex items-center justify-center">
+              <svg class="w-4 h-4 text-sky-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 11 12 6 7 11"/><line x1="12" y1="18" x2="12" y2="6"/></svg>
+            </span>
+          </div>
+          <div class="flex items-baseline gap-1.5 flex-wrap">
+            <span id="leanValue" class="num text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white">—</span>
+            <span class="text-xs sm:text-sm text-gray-400 font-medium">kcal / day</span>
+          </div>
+          <p class="mt-3 text-xs text-gray-400 leading-relaxed w-full">Controlled surplus · +250 kcal · minimizes adipose accrual during hypertrophy.</p>
+          <div class="mt-auto pt-4 border-t border-white/5 flex items-center justify-between text-[11px] text-gray-500">
+            <span>Maintenance + 250</span>
+            <span class="text-sky-300 font-semibold">Lean Bulk</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scientific Validation -->
+    <section class="mt-10">
+      <div class="glass-strong rounded-2xl p-6 sm:p-8">
+        <div class="flex items-center gap-3 mb-5">
+          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+            <svg class="w-4.5 h-4.5 text-ink-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <div>
+            <h2 class="text-base sm:text-lg font-semibold text-white">Scientific Validation & Data Methodology</h2>
+            <p class="text-xs text-gray-400 mt-0.5">Peer-reviewed frameworks underpinning this dashboard.</p>
+          </div>
+        </div>
+
+        <ol class="space-y-4 text-sm text-gray-300 leading-relaxed list-decimal list-inside marker:text-emerald-400 marker:font-bold">
+          <li>
+            <span class="font-semibold text-white">Baseline BMR Model:</span>
+            Calibrated via the Mifflin–St Jeor Equation, clinically validated by the American Dietetic Association as the most accurate predictive framework for resting metabolic rate within ±10% of indirect calorimetry parameters (Mifflin et al., 1990).
+          </li>
+          <li>
+            <span class="font-semibold text-white">Custom Activity Factor (1.48×):</span>
+            Derived from the Compendium of Physical Activities. Evaluates Full Body Every Other Day resistance lifting (averaging 3.5×/wk at ~6.0 METs) interlaced with 30-minute low-density jump rope intervals. Accounting for a documented 40% work to 60% rest breathing ratio, the composite metabolic task rating equates to 5.32 METs, justifying an independent metabolic tier above standard 3-day tracks (Ainsworth et al., 2011).
+          </li>
+        </ol>
+
+        <div class="mt-6 pt-5 border-t border-white/6 flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px] text-gray-500">
+          <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Mifflin et al., 1990</span>
+          <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-sky-400"></span> Ainsworth et al., 2011</span>
+          <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> ADA Clinical Validation</span>
+          <span class="ml-auto font-mono text-gray-600">v1.0 · 2026</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="mt-8 text-center text-xs text-gray-500">
+      Built for clinical precision · Mifflin–St Jeor · Compendium of Physical Activities
+    </footer>
+  </main>
+
+<script>
+/* =========================================================
+   TDEE Dashboard — Modular Vanilla JS
+   ========================================================= */
+
+const ACTIVITY_OPTIONS = [
+  { label: '0 days / week (Sedentary)',       multiplier: 1.2   },
+  { label: '1 day / week',                    multiplier: 1.25  },
+  { label: '2 days / week',                   multiplier: 1.31  },
+  { label: '3 days / week',                   multiplier: 1.375 },
+  { label: '4 days / week',                   multiplier: 1.42  },
+  { label: 'Custom FBEOD + Cardio',           multiplier: 1.48  },
+  { label: '5 days / week',                   multiplier: 1.55  },
+  { label: '6 days / week',                   multiplier: 1.64  },
+  { label: '7 days / week',                   multiplier: 1.725 },
+];
+
+const state = {
+  sex: 'male',
+  weight: 78,
+  height: 178,
+  age: 28,
+  activityIndex: 5, // default: Custom FBEOD + Cardio
+};
+
+/* ---------- DOM ---------- */
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+const els = {
+  weight: $('#weight'),
+  height: $('#height'),
+  age: $('#age'),
+  sexToggle: $('#sexToggle'),
+  bmr: $('#bmrValue'),
+  maintenance: $('#maintenanceValue'),
+  deficit: $('#deficitValue'),
+  lean: $('#leanValue'),
+  mMult: $('#mMult'),
+  targetMeta: $('#targetMeta'),
+  csTrigger: $('#csTrigger'),
+  csMenu: $('#csMenu'),
+  csLabel: $('#csLabel'),
+  csMultiplier: $('#csMultiplier'),
+  activitySelect: $('#activitySelect'),
+};
+
+/* ---------- Custom Dropdown ---------- */
+function buildDropdown() {
+  els.csMenu.innerHTML = '';
+  ACTIVITY_OPTIONS.forEach((opt, idx) => {
+    const el = document.createElement('div');
+    el.className = 'cs-option' + (idx === state.activityIndex ? ' active' : '');
+    el.setAttribute('role', 'option');
+    el.dataset.index = idx;
+    el.innerHTML = `
+      <span class="text-sm text-gray-200 font-medium">${opt.label}</span>
+      <span class="text-xs font-mono font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5">×${opt.multiplier}</span>
+    `;
+    el.addEventListener('click', () => {
+      state.activityIndex = idx;
+      closeDropdown();
+      render();
+    });
+    els.csMenu.appendChild(el);
+  });
+}
+
+function openDropdown()  { els.activitySelect.classList.add('open');  els.csTrigger.setAttribute('aria-expanded', 'true'); }
+function closeDropdown() { els.activitySelect.classList.remove('open'); els.csTrigger.setAttribute('aria-expanded', 'false'); }
+function toggleDropdown(){ els.activitySelect.classList.contains('open') ? closeDropdown() : openDropdown(); }
+
+els.csTrigger.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(); });
+document.addEventListener('click', (e) => {
+  if (!els.activitySelect.contains(e.target)) closeDropdown();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDropdown(); });
+
+function syncDropdownLabel() {
+  const opt = ACTIVITY_OPTIONS[state.activityIndex];
+  els.csLabel.textContent = opt.label;
+  els.csMultiplier.textContent = '×' + opt.multiplier;
+  $$('#csMenu .cs-option').forEach((node, i) => {
+    node.classList.toggle('active', i === state.activityIndex);
+  });
+}
+
+/* ---------- Sex Toggle ---------- */
+function bindSexToggle() {
+  els.sexToggle.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.sex = btn.dataset.sex;
+      els.sexToggle.querySelectorAll('button').forEach(b => {
+        const isActive = b === btn;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+      render();
+    });
+  });
+}
+
+/* ---------- Numeric Inputs ---------- */
+function bindNumericInputs() {
+  ['weight', 'height', 'age'].forEach(key => {
+    const node = els[key];
+    const handler = () => {
+      const v = parseFloat(node.value);
+      if (!isNaN(v) && v > 0) state[key] = v;
+      render();
+    };
+    node.addEventListener('input', handler);
+    node.addEventListener('change', handler);
+  });
+}
+
+/* ---------- Calculations ---------- */
+function calculateBMR() {
+  const { sex, weight, height, age } = state;
+  const base = (10 * weight) + (6.25 * height) - (5 * age);
+  return sex === 'male' ? base + 5 : base - 161;
+}
+
+function calculateTargets(bmr, multiplier) {
+  const maintenance = bmr * multiplier;
+  return {
+    maintenance,
+    deficit: maintenance - 500,
+    lean: maintenance + 250,
+  };
+}
+
+/* ---------- Formatting ---------- */
+function formatKcal(n) {
+  if (!isFinite(n)) return '—';
+  return Math.round(n).toLocaleString('en-US');
+}
+
+/* ---------- Render ---------- */
+function render() {
+  const bmr = calculateBMR();
+  const multiplier = ACTIVITY_OPTIONS[state.activityIndex].multiplier;
+  const targets = calculateTargets(bmr, multiplier);
+
+  els.bmr.textContent = formatKcal(bmr);
+  els.maintenance.textContent = formatKcal(targets.maintenance);
+  els.deficit.textContent = formatKcal(targets.deficit);
+  els.lean.textContent = formatKcal(targets.lean);
+  els.mMult.textContent = multiplier;
+
+  els.targetMeta.textContent =
+    `BMR ${formatKcal(bmr)} × ${multiplier} · ${state.sex.toUpperCase()} · ${state.weight}kg · ${state.height}cm · ${state.age}y`;
+
+  syncDropdownLabel();
+}
+
+/* ---------- Init ---------- */
+function init() {
+  buildDropdown();
+  bindSexToggle();
+  bindNumericInputs();
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
